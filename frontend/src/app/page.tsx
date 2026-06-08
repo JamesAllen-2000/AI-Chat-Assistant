@@ -1,7 +1,7 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { Bot, Send, User, Loader2, LogOut, Plus, MessageSquare } from 'lucide-react';
+import { Bot, Send, User, Loader2, LogOut, Plus, MessageSquare, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -50,6 +50,7 @@ function ChatInterface({ onSignOut }: { onSignOut: (() => void) | undefined }) {
   const [messages, setMessages] = useState<Array<{id: string, role: string, content: string}>>([]);
   const [sessions, setSessions] = useState<Array<{sessionId: string, timestamp: string, preview: string}>>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -158,13 +159,24 @@ function ChatInterface({ onSignOut }: { onSignOut: (() => void) | undefined }) {
   };
 
   return (
-    <div className="flex h-screen bg-neutral-950 font-sans text-neutral-100 overflow-hidden">
+    <div className="flex h-[100dvh] bg-neutral-950 font-sans text-neutral-100 overflow-hidden">
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-64 bg-neutral-900 border-r border-neutral-800 flex flex-col hidden md:flex">
-        <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-900/50 backdrop-blur-sm z-10">
-          <Button onClick={handleNewChat} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/20 justify-start gap-2">
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 md:w-64 bg-neutral-900 border-r border-neutral-800 flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+        <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-900/50 backdrop-blur-sm z-10 gap-2">
+          <Button onClick={() => { handleNewChat(); setIsSidebarOpen(false); }} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/20 justify-start gap-2">
             <Plus className="w-4 h-4" />
             New Chat
+          </Button>
+          <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setIsSidebarOpen(false)}>
+            <X className="w-5 h-5 text-neutral-400" />
           </Button>
         </div>
         
@@ -174,7 +186,7 @@ function ChatInterface({ onSignOut }: { onSignOut: (() => void) | undefined }) {
             {sessions.map((session) => (
               <button
                 key={session.sessionId}
-                onClick={() => setActiveSessionId(session.sessionId)}
+                onClick={() => { setActiveSessionId(session.sessionId); setIsSidebarOpen(false); }}
                 className={`w-full text-left px-3 py-3 rounded-lg text-sm truncate flex items-center gap-3 transition-colors ${
                   activeSessionId === session.sessionId 
                     ? 'bg-neutral-800 text-emerald-400' 
@@ -202,7 +214,10 @@ function ChatInterface({ onSignOut }: { onSignOut: (() => void) | undefined }) {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-neutral-950 relative overflow-hidden min-w-0">
         {/* Header */}
-        <div className="h-16 shrink-0 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md flex items-center px-6 z-10">
+        <div className="h-16 shrink-0 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md flex items-center px-4 sm:px-6 z-10 gap-3">
+          <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => setIsSidebarOpen(true)}>
+            <Menu className="w-5 h-5 text-neutral-400" />
+          </Button>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-500/10 rounded-xl">
               <Bot className="w-5 h-5 text-emerald-400" />
@@ -272,7 +287,7 @@ function ChatInterface({ onSignOut }: { onSignOut: (() => void) | undefined }) {
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="shrink-0 p-4 bg-neutral-950 border-t border-neutral-800 z-10">
+        <div className="shrink-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-neutral-950 border-t border-neutral-800 z-10">
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto flex gap-3 relative">
             <Input
               value={input}
