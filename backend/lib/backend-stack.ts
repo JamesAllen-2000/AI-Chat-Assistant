@@ -55,7 +55,7 @@ export class BackendStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30), // LLM calls can take a bit
       environment: {
         TABLE_NAME: chatTable.tableName,
-        GEMINI_API_KEY: process.env.GEMINI_API_KEY || 'MISSING_API_KEY',
+        GROQ_API_KEY: process.env.GROQ_API_KEY || 'MISSING_API_KEY',
       },
     });
 

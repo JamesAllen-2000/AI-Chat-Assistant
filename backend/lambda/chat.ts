@@ -1,13 +1,13 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
 const ddbClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(ddbClient);
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
@@ -103,28 +103,31 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     // Sort chronologically
     const pastMessages = (historyResult.Items || []).reverse(); 
 
-    // Inject Safety System Instruction
-    const systemInstruction = "You are a helpful, concise AI assistant. Do not provide medical, legal, or harmful advice.";
-
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash-lite",
-      systemInstruction,
-    });
-    
-    // Format history for Gemini SDK
+    // Format history for Groq SDK
     const formattedHistory = pastMessages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
+      role: msg.role, // 'assistant' or 'user'
+      content: msg.content,
     }));
 
-    // Start a chat session with history
-    const chatSession = model.startChat({
-      history: formattedHistory,
+    // Inject Safety System Instruction
+    formattedHistory.unshift({
+      role: "system",
+      content: "You are a helpful, concise AI assistant. Do not provide medical, legal, or harmful advice."
+    });
+    
+    // Add new user message
+    formattedHistory.push({
+      role: "user",
+      content: message
     });
 
     // 4. Generate Response
-    const result = await chatSession.sendMessage(message);
-    const aiResponseText = result.response.text();
+    const chatCompletion = await groq.chat.completions.create({
+      messages: formattedHistory as any,
+      model: "llama-3.1-8b-instant",
+      temperature: 0.7,
+    });
+    const aiResponseText = chatCompletion.choices[0]?.message?.content || "";
 
     // 5. Save the new messages to DynamoDB
     const timestamp = new Date().toISOString();
