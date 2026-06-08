@@ -11,7 +11,7 @@ export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // 1. Authentication: Cognito User Pool
+    // Authentication: Cognito User Pool
     const userPool = new cognito.UserPool(this, 'ChatbotUserPool', {
       userPoolName: 'AiChatbotUsers',
       selfSignUpEnabled: true,
@@ -30,7 +30,7 @@ export class BackendStack extends cdk.Stack {
       generateSecret: false, // For web client (Next.js)
     });
 
-    // 2. Database: DynamoDB for Chat History (Free Tier Eligible)
+    // Database: DynamoDB for Chat History (Free Tier Eligible)
     const chatTable = new dynamodb.Table(this, 'ChatSessionsTable2', {
       tableName: 'ChatSessions2',
       partitionKey: { name: 'sessionId', type: dynamodb.AttributeType.STRING },
@@ -47,7 +47,7 @@ export class BackendStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-    // 3. Compute: AWS Lambda (Node.js)
+    // Compute: AWS Lambda (Node.js)
     const chatLambda = new aws_lambda_nodejs.NodejsFunction(this, 'ChatHandler', {
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../lambda/chat.ts'),
@@ -62,7 +62,7 @@ export class BackendStack extends cdk.Stack {
     // Grant Lambda permissions to read/write to the DynamoDB table
     chatTable.grantReadWriteData(chatLambda);
 
-    // 4. API Layer: API Gateway
+    // API Layer: API Gateway
     const api = new apigateway.RestApi(this, 'ChatbotApi', {
       restApiName: 'AI Chatbot API',
       description: 'API for AI Chat interactions',

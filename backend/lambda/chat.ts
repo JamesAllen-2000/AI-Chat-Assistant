@@ -11,12 +11,9 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    // 1. Get User ID from Cognito Authorizer Context
-    // Fallback to a default for local/unauthenticated testing if authorizer is bypassed
     const userId = event.requestContext?.authorizer?.claims?.sub || 'anonymous-user';
     const tableName = process.env.TABLE_NAME!;
     
-    // Handle GET Request: Return chat history or session list
     if (event.httpMethod === 'GET') {
       const sessionId = event.queryStringParameters?.sessionId;
 
@@ -54,13 +51,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const sessionsResult = await docClient.send(new QueryCommand(sessionsParams));
         const allItems = sessionsResult.Items || [];
         
-        // Deduplicate by sessionId to get a list of unique sessions
         const sessionsMap = new Map<string, any>();
         for (const item of allItems) {
           if (!sessionsMap.has(item.sessionId)) {
-            // Keep the first user message as the title (since we sort by timestamp descending, this is the latest message, so let's find the first instead or just use it)
-            // Wait, we want the *first* message in the session to be the title. 
-            // We can just keep track of it, or return all grouped.
             sessionsMap.set(item.sessionId, {
               sessionId: item.sessionId,
               timestamp: item.timestamp,
@@ -88,7 +81,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return { statusCode: 400, body: JSON.stringify({ error: 'Message and sessionId are required' }) };
     }
 
-    // 2. Fetch recent conversation history from DynamoDB
     const historyParams = {
       TableName: tableName,
       KeyConditionExpression: 'sessionId = :sessionId',
@@ -121,7 +113,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       content: message
     });
 
-    // 4. Generate Response
     const chatCompletion = await groq.chat.completions.create({
       messages: formattedHistory as any,
       model: "llama-3.1-8b-instant",
@@ -129,12 +120,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     });
     const aiResponseText = chatCompletion.choices[0]?.message?.content || "";
 
-    // 5. Save the new messages to DynamoDB
     const timestamp = new Date().toISOString();
     const userMessageId = uuidv4();
     const aiMessageId = uuidv4();
 
-    // Save User Message
     await docClient.send(new PutCommand({
       TableName: tableName,
       Item: {
@@ -147,12 +136,11 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }
     }));
 
-    // Save AI Response
     await docClient.send(new PutCommand({
       TableName: tableName,
       Item: {
         sessionId,
-        timestamp: new Date().toISOString(), // slightly later to preserve order
+        timestamp: new Date().toISOString(),
         userId,
         messageId: aiMessageId,
         role: 'assistant',
@@ -160,7 +148,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }
     }));
 
-    // 6. Return response to client
     return {
       statusCode: 200,
       headers: {

@@ -14,7 +14,7 @@ import { Authenticator } from '@aws-amplify/ui-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import '@aws-amplify/ui-react/styles.css';
 
-// Configure Amplify with the values from your CDK deployment
+// Configure Amplify
 Amplify.configure({
   Auth: {
     Cognito: {
