@@ -159,7 +159,7 @@ function ChatInterface({ onSignOut }: { onSignOut: (() => void) | undefined }) {
   };
 
   return (
-    <div className="flex h-[100dvh] bg-neutral-950 font-sans text-neutral-100 overflow-hidden">
+    <div className="flex fixed inset-0 bg-neutral-950 font-sans text-neutral-100 overflow-hidden">
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
